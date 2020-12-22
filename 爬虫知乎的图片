@@ -1,0 +1,69 @@
+#coding=utf-8
+import re
+import numpy
+import requests
+import urllib.request
+import os
+path = "###应为自己的文件夹目录"
+
+# 知乎有反爬虫，加入http headers伪装浏览器
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36",
+    "Connection": "keep-alive",
+    "Accept": "text/html,application/json,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.8"}
+
+# 知乎问题id
+question_id = 50426133
+interval =1
+offset = 0
+rank = 20
+novels_count = dict()
+
+while True:
+    # 知乎获取回答分页API
+    url = f'https://www.zhihu.com/api/v4/questions/{question_id}/answers?include=content&limit={interval}&offset={offset}&sort_by=default'
+    html = requests.get(url, headers=headers)
+    answers = html.json()['data']
+    
+    offset += interval
+
+    #i=i+1
+    #f=answers.text
+    # #print(answers)
+
+    if len(answers) == 0:
+        print("no picture at all")
+    for answer in answers:
+        #对本作者的图片从1开始排序
+        j=1
+        #get回答作者姓名
+        profile = answer['author']
+        authorname = profile['name']
+        #找到图片网址并进行重复性剔除
+        picturedic = answer['content']
+        picpartpass = re.findall('data-original=".+?.jpg',picturedic)
+        picpart = {}.fromkeys(picpartpass).keys() 
+        #print(picpart)
+        #进行遍历图片并进行下载
+        for pic in picpart:
+            g = re.sub('data-original="', '', pic)
+            b = requests.get(g, headers=headers)
+            #print(g)
+            #print(b.content)
+            fp = open("b", "wb")
+            fp.write(b.content)
+            fp.close()
+            #我也不知道为啥，我保存下来的文件就叫b、还没有格式，我只能把它找出来重新给他命名 
+            #获取该目录下所有文件，存入列表中
+            f = os.walk(path)
+            #对下载的图片进行重新命名
+            picname='这是'+str(authorname)+'的第'+str(j)+'个图'+'.jpg'
+            print(picname)
+            for arent,dirnames,filenames in f:
+                #print(str(i)+'.jpg') 
+                for filename in filenames:
+                #print(filenames)
+                    if filename == 'b':
+                        os.rename(filename,picname)
+                        j=j+1
